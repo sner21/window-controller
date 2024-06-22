@@ -2,7 +2,7 @@ use windows::Win32::Foundation::HWND;
 
 
 mod utils;
-pub struct window_controller{}
+pub struct window_controller;
 impl window_controller{
     pub fn frameless(hwnd: HWND){
         utils::controller::frameless(hwnd)
