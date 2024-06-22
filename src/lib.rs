@@ -1,6 +1,6 @@
-use winapi::{
-    shared::windef::HWND,
-};
+use windows::Win32::Foundation::HWND;
+
+
 mod utils;
 pub struct window_controller{}
 impl window_controller{
