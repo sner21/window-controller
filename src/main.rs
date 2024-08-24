@@ -1,8 +1,6 @@
 use clap::Parser;
 use inquire::{Select};
 use std::collections::HashMap;
-use windows::core::*;
-
 use windows::{
     core::{
         PCWSTR,
@@ -24,7 +22,6 @@ use windows::Win32::Foundation::{
     HWND,
     BOOL,
 };
-use windows::Win32::UI::WindowsAndMessaging::{GetWindowLongA, GWL_STYLE};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -55,32 +52,40 @@ extern "system" fn enum_window(window: HWND, _: LPARAM) -> BOOL {
 }
 
 fn main() {
+    let binding = std::env::var("LANG").unwrap();
+    let mut os_lang = binding.as_str().split(".").collect::<Vec<_>>()[0];
+    let lang_eunm: HashMap<&str, [&str; 6]> = HashMap::from([
+        ("zh_CN", ["全屏无边框","顶置","选择窗口","选择模式","方向键切换/enter选择","There was an error, please try again"]),
+        ("en_US",  ["Full screen without borders", "Top placement","Select window", "Selection mode", "Direction key switching/enter selection","There was an error, please try again"]),
+        ("ja_JP",  ["全画面ボーダレス","最前面表示","ウィンドウを選択する","選択モード","矢印キーで切り替え / エンターキーで選択","There was an error, please try again"]),
+    ]);
+    if !lang_eunm.contains_key(os_lang){
+        os_lang = "en_US"
+    }
     unsafe {
         EnumWindows(Some(enum_window), LPARAM(0));
     }
     let mut mode_eunm: HashMap<&str, fn( HWND)> = HashMap::new();
-    mode_eunm.insert("全屏无边框",utils::controller::frameless);
-    mode_eunm.insert("顶置", utils::controller::overhead);
-    let mut title: &str = "";
+    mode_eunm.insert(lang_eunm[os_lang][0],utils::controller::frameless);
+    mode_eunm.insert(lang_eunm[os_lang][1], utils::controller::overhead);
     let args = Args::parse();
-    let options: Vec<&str> = vec!["全屏无边框", "顶置"];
+    let options: Vec<&str> = vec![lang_eunm[os_lang][0], lang_eunm[os_lang][1]];
     let mut o: Vec<&str> = vec![];
     unsafe {
         for i in 0..PROCESS.len() {
             o.push(PROCESS[i].as_str());
         }
     }
+    let mut title: &str = "";
     if args.title == "" {
-        title = Select::new("选择窗口", o).prompt().unwrap();
+        title = Select::new(lang_eunm[os_lang][2], o).prompt().unwrap();
     } else {
         title = &*args.title
     }
-    let mut ans: Select<&str> = Select::new("选择模式", options);
-    ans.help_message = Option::from("方向键切换/enter选择");
+    let mut ans: Select<&str> = Select::new(lang_eunm[os_lang][3], options);
+    ans.help_message = Option::from(lang_eunm[os_lang][4]);
     unsafe {
         let hwnd = FindWindowW(None,  PCWSTR(HSTRING::from(title).as_ptr()));
-        let style = GetWindowLongA(hwnd, GWL_STYLE);
-        println!("{}", style);
         if args.mode!="" {
             mode_eunm[args.mode.as_str()](hwnd)
         } else {
